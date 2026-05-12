@@ -53,7 +53,7 @@ async function fetchSuggestions(query) {
   if (_acController) _acController.abort();
   _acController = new AbortController();
   try {
-    const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=5&appid=${API_KEY}`;
+    const url = `/api/weather?type=geo&query=${encodeURIComponent(`q=${encodeURIComponent(query)}`)}`;
     const res  = await fetch(url, { signal: _acController.signal });
     if (!res.ok) return [];
     const data = await res.json();
