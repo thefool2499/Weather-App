@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atmos — Weather Experience</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <canvas id="weather-canvas"></canvas>
+  <div id="theme-fade"></div>
+
+  <div id="error-banner" role="alert" hidden>
+    <span id="error-msg">Something went wrong.</span>
+    <button id="error-close">✕</button>
+  </div>
+
+  <div id="app">
+
+    <!-- ══ HEADER ══ -->
+    <header>
+      <!-- Desktop: brand sits directly in header flex row -->
+      <div class="brand brand--desktop">atm<span>os</span></div>
+
+      <!-- Mobile row 1: brand + unit toggle side by side -->
+      <div class="header-top-row">
+        <div class="brand">atm<span>os</span></div>
+        <div class="unit-toggle unit-toggle--mobile">
+          <button class="unit-btn active" id="btn-c-m" aria-pressed="true">°C</button>
+          <button class="unit-btn" id="btn-f-m" aria-pressed="false">°F</button>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="unit-toggle">
+          <button class="unit-btn active" id="btn-c" aria-pressed="true">°C</button>
+          <button class="unit-btn" id="btn-f" aria-pressed="false">°F</button>
+        </div>
+
+        <div class="search-clock-group">
+          <div class="search-bar">
+            <span class="search-bar-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <div class="search-input-wrap">
+              <input type="text" id="city-input" placeholder="Search city…" aria-label="City" autocomplete="off">
+              <button class="input-clear-btn" id="input-clear" aria-label="Clear">✕</button>
+            </div>
+            <button id="search-btn" aria-label="Search" tabindex="-1"></button>
+          </div>
+          <div class="city-clock" id="city-clock">
+            <span class="clock-dot"></span>
+            <span class="clock-time" id="clock-time">—</span>
+            <span class="clock-label" id="clock-label">local time</span>
+          </div>
+          <div class="search-history" id="search-history"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ══ WEATHER ALERTS ══ -->
+    <div id="alerts-container"></div>
+
+    <!-- ══ MAIN GRID ══ -->
+    <div class="main-grid">
+
+      <!-- Hero Card -->
+      <div class="card weather-hero" id="weather-hero-card">
+        <!-- Skeleton -->
+        <div class="hero-skeleton" id="hero-skeleton">
+          <div class="skeleton sk-location"></div>
+          <div class="skeleton sk-city"></div>
+          <div class="skeleton sk-daybar"></div>
+          <div class="sk-temp-row">
+            <div class="skeleton sk-temp"></div>
+            <div class="sk-cond-block">
+              <div class="skeleton skeleton-circle sk-icon"></div>
+              <div class="skeleton sk-cond-text"></div>
+              <div class="skeleton sk-feels"></div>
+            </div>
+          </div>
+          <div class="sk-stats">
+            <div class="sk-stat"><div class="skeleton sk-stat-label"></div><div class="skeleton sk-stat-val"></div></div>
+            <div class="sk-stat"><div class="skeleton sk-stat-label"></div><div class="skeleton sk-stat-val"></div></div>
+            <div class="sk-stat"><div class="skeleton sk-stat-label"></div><div class="skeleton sk-stat-val"></div></div>
+            <div class="sk-stat"><div class="skeleton sk-stat-label"></div><div class="skeleton sk-stat-val"></div></div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-state" style="display:none">
+          <svg class="empty-state-svg" viewBox="0 0 220 180" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="es-glow" cx="50%" cy="40%" r="55%">
+                <stop offset="0%" stop-color="currentColor" stop-opacity="0.18"/>
+                <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
+              </radialGradient>
+              <linearGradient id="es-cloud1" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="currentColor" stop-opacity="0.22"/>
+                <stop offset="100%" stop-color="currentColor" stop-opacity="0.10"/>
+              </linearGradient>
+              <linearGradient id="es-cloud2" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="currentColor" stop-opacity="0.14"/>
+                <stop offset="100%" stop-color="currentColor" stop-opacity="0.06"/>
+              </linearGradient>
+            </defs>
+            <ellipse cx="110" cy="80" rx="90" ry="70" fill="url(#es-glow)"/>
+            <circle cx="110" cy="62" r="28" fill="currentColor" opacity="0.18"/>
+            <circle cx="110" cy="62" r="20" fill="currentColor" opacity="0.28"/>
+            <g stroke="currentColor" stroke-linecap="round" opacity="0.3">
+              <line x1="110" y1="28" x2="110" y2="20"/>
+              <line x1="134" y1="38" x2="140" y2="32"/>
+              <line x1="144" y1="62" x2="152" y2="62"/>
+              <line x1="134" y1="86" x2="140" y2="92"/>
+              <line x1="86"  y1="86" x2="80"  y2="92"/>
+              <line x1="76"  y1="62" x2="68"  y2="62"/>
+              <line x1="86"  y1="38" x2="80"  y2="32"/>
+            </g>
+            <ellipse cx="112" cy="108" rx="44" ry="26" fill="url(#es-cloud1)"/>
+            <ellipse cx="88"  cy="116" rx="26" ry="20" fill="url(#es-cloud1)"/>
+            <ellipse cx="136" cy="114" rx="24" ry="18" fill="url(#es-cloud1)"/>
+            <ellipse cx="112" cy="98"  rx="28" ry="22" fill="url(#es-cloud1)"/>
+            <ellipse cx="60"  cy="90"  rx="28" ry="18" fill="url(#es-cloud2)"/>
+            <ellipse cx="42"  cy="96"  rx="18" ry="14" fill="url(#es-cloud2)"/>
+            <ellipse cx="76"  cy="96"  rx="16" ry="12" fill="url(#es-cloud2)"/>
+            <circle cx="110" cy="148" r="4" fill="currentColor" opacity="0.25"/>
+            <line x1="110" y1="148" x2="110" y2="158" stroke="currentColor" stroke-width="1.5" opacity="0.2" stroke-linecap="round"/>
+          </svg>
+          <div class="empty-state-title">Where in the world?</div>
+          <div class="empty-state-sub">Search a city to see live weather, forecasts, and more.</div>
+        </div>
+
+        <!-- Content -->
+        <div class="card-pad" id="hero-content" style="display:none;" aria-live="polite" aria-atomic="false">
+          <div class="hero-top">
+            <div class="hero-left">
+              <div class="location-line" id="location-line">Detecting location…</div>
+              <div class="city-name" id="city-display">—</div>
+              <div class="daylight-bar-wrap" id="daylight-wrap" style="display:none">
+                <div class="daylight-labels">
+                  <span id="sunrise-label">—</span>
+                  <span id="daylight-pct-label" style="font-weight:600;color:var(--text-primary)"></span>
+                  <span id="sunset-label">—</span>
+                </div>
+                <div class="daylight-track">
+                  <div class="daylight-fill" id="daylight-fill" style="width:0%"></div>
+                  <div class="daylight-thumb" id="daylight-thumb" style="left:0%"></div>
+                </div>
+              </div>
+              <div class="moon-badge" id="moon-badge">
+                <span class="moon-phase-icon" id="moon-phase-icon">🌕</span>
+                <span id="moon-phase-name">Full Moon</span>
+              </div>
+              <div class="temp-row">
+                <div class="temp-main" id="temp-display">
+                  <span id="temp-number">—</span><span class="temp-unit">°</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="hero-right">
+              <div class="condition-block">
+                <div class="condition-icon-wrap" id="cond-icon-wrap"></div>
+                <div class="condition-text" id="cond-text">Loading…</div>
+              </div>
+              <div class="sun-times" id="sun-times" style="display:none">
+                <div class="sun-time"><span class="sun-time-icon">🌅</span><span class="sun-time-val" id="sunrise-val">—</span></div>
+                <div class="sun-time"><span class="sun-time-icon">🌇</span><span class="sun-time-val" id="sunset-val">—</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="weather-stats">
+            <div class="stat">
+              <div class="stat-label">Humidity</div>
+              <div class="stat-val" id="humidity">—<span class="stat-unit">%</span></div>
+              <div class="humidity-bar-track"><div class="humidity-bar-fill" id="humidity-bar" style="width:0%"></div></div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Dew Point</div>
+              <div class="stat-val" id="dew-point">—<span class="stat-unit">°</span></div>
+              <div class="stat-sub" id="dew-desc"></div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Wind</div>
+              <div class="stat-val" id="wind">—<span class="stat-unit"> km/h</span></div>
+              <div class="wind-dir" id="wind-dir"></div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Feels Like</div>
+              <div class="stat-val" id="feels-stat">—<span class="stat-unit">°</span></div>
+              <div class="stat-sub" id="feels-desc"></div>
+            </div>
+<div class="stat stat-aqi">
+              <div class="stat-label">Air Quality
+                <span class="aqi-live-dot aqi-live-dot--inline"><span class="aqi-dot-pulse"></span></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
+                <div class="stat-val" id="aqi-stat-num">—</div>
+                <div class="aqi-label" id="aqi-stat-label">—</div>
+              </div>
+              <div class="aqi-scale-wrap" style="margin-top:6px;">
+                <div class="aqi-scale-track aqi-scale-track--sm">
+                  <div class="aqi-scale-thumb" id="aqi-stat-thumb" style="left:0%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Pressure</div>
+              <div class="stat-val" id="pressure">—<span class="stat-unit"> hPa</span></div>
+              <div class="stat-sub" id="pressure-desc"></div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Visibility</div>
+              <div class="stat-val" id="visibility">—<span class="stat-unit"> km</span></div>
+              <div class="stat-sub" id="visibility-desc"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Forecast Card -->
+      <div class="card forecast-card">
+        <!-- Skeleton -->
+        <div class="forecast-skeleton" id="forecast-skeleton">
+          <div class="skeleton sk-section-title"></div>
+          <div class="sk-hourly-row">
+            <div class="sk-hour-slot"><div class="skeleton sk-time"></div><div class="skeleton skeleton-circle sk-icon-sm"></div><div class="skeleton sk-temp-sm"></div></div>
+            <div class="sk-hour-slot"><div class="skeleton sk-time"></div><div class="skeleton skeleton-circle sk-icon-sm"></div><div class="skeleton sk-temp-sm"></div></div>
+            <div class="sk-hour-slot"><div class="skeleton sk-time"></div><div class="skeleton skeleton-circle sk-icon-sm"></div><div class="skeleton sk-temp-sm"></div></div>
+            <div class="sk-hour-slot"><div class="skeleton sk-time"></div><div class="skeleton skeleton-circle sk-icon-sm"></div><div class="skeleton sk-temp-sm"></div></div>
+            <div class="sk-hour-slot"><div class="skeleton sk-time"></div><div class="skeleton skeleton-circle sk-icon-sm"></div><div class="skeleton sk-temp-sm"></div></div>
+            <div class="sk-hour-slot"><div class="skeleton sk-time"></div><div class="skeleton skeleton-circle sk-icon-sm"></div><div class="skeleton sk-temp-sm"></div></div>
+            <div class="sk-hour-slot"><div class="skeleton sk-time"></div><div class="skeleton skeleton-circle sk-icon-sm"></div><div class="skeleton sk-temp-sm"></div></div>
+            <div class="sk-hour-slot"><div class="skeleton sk-time"></div><div class="skeleton skeleton-circle sk-icon-sm"></div><div class="skeleton sk-temp-sm"></div></div>
+          </div>
+          <div class="skeleton sk-section-title" style="width:120px"></div>
+          <div class="sk-daily-list">
+            <div class="sk-day-row"><div class="skeleton sk-day-name"></div><div class="skeleton skeleton-circle sk-day-icon"></div><div class="skeleton sk-day-desc"></div><div class="skeleton sk-day-temps"></div></div>
+            <div class="sk-day-row"><div class="skeleton sk-day-name"></div><div class="skeleton skeleton-circle sk-day-icon"></div><div class="skeleton sk-day-desc"></div><div class="skeleton sk-day-temps"></div></div>
+            <div class="sk-day-row"><div class="skeleton sk-day-name"></div><div class="skeleton skeleton-circle sk-day-icon"></div><div class="skeleton sk-day-desc"></div><div class="skeleton sk-day-temps"></div></div>
+            <div class="sk-day-row"><div class="skeleton sk-day-name"></div><div class="skeleton skeleton-circle sk-day-icon"></div><div class="skeleton sk-day-desc"></div><div class="skeleton sk-day-temps"></div></div>
+            <div class="sk-day-row"><div class="skeleton sk-day-name"></div><div class="skeleton skeleton-circle sk-day-icon"></div><div class="skeleton sk-day-desc"></div><div class="skeleton sk-day-temps"></div></div>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="card-pad" id="forecast-content" style="display:none">
+          <div class="card-title" style="margin-bottom:12px">Hourly — Next 24h</div>
+          <div class="hourly-scroll"><div class="hourly-row" id="hourly-row"></div></div>
+          <div class="card-title" style="margin-bottom:12px;margin-top:20px">5-Day Forecast</div>
+          <div class="daily-list" id="daily-list"></div>
+        </div>
+      </div>
+
+    </div><!-- /.main-grid -->
+  </div><!-- /#app -->
+
+  <!-- ES Module entry point -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
