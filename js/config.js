@@ -1,8 +1,8 @@
 /* ══════════════════════════════
    1. CONFIG & STATE
 ══════════════════════════════ */
-export const API_KEY  = '02aeffb7f7cf8e338abaeebefec49695';
-export const BASE_URL = 'https://api.openweathermap.org/data/2.5';
+export const API_KEY  = null; // no longer needed on frontend
+export const BASE_URL = '/api/weather'; // points to your netlify function
 
 export const state = {
   currentWeatherData : null,

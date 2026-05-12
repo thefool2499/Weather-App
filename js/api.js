@@ -1,7 +1,7 @@
 /* ══════════════════════════════
    14. API FETCH
 ══════════════════════════════ */
-import { API_KEY, BASE_URL, state } from './config.js';
+import { BASE_URL, state } from './config.js';
 import { showSkeletons, hideSkeletons } from './ui.js';
 import { addToHistory } from './search.js';
 import { clearAlerts, fetchAlerts } from './alerts.js';
@@ -21,14 +21,14 @@ function fetchWithTimeout(url, timeoutMs = 10_000) {
 }
 
 /**
- * Builds the OWM current-weather URL for either a city-name string
+ * Builds the Netlify function URL for either a city-name string
  * or a { lat, lon } coordinate object.
  */
 function weatherUrl(query) {
-  const base = `${BASE_URL}/weather?appid=${API_KEY}&units=metric`;
-  return typeof query === 'string'
-    ? `${base}&q=${encodeURIComponent(query)}`
-    : `${base}&lat=${query.lat}&lon=${query.lon}`;
+  const queryStr = typeof query === 'string'
+    ? `q=${encodeURIComponent(query)}`
+    : `lat=${query.lat}&lon=${query.lon}`;
+  return `${BASE_URL}?type=weather&query=${encodeURIComponent(queryStr)}`;
 }
 
 // ─── Error / loading UI ───────────────────────────────────────────────────────
@@ -117,13 +117,10 @@ export async function fetchWeather(query) {
 
     hideSkeletons();
 
-    // Only add named searches to history — coordinate-based lookups (autocomplete
-    // select) already add via the city name returned in data.name after fetch.
     if (typeof query === 'string') addToHistory(data.name);
 
     const { lat, lon } = data.coord;
 
-    // Forecast must complete before we cache, so hourly/daily are included.
     await fetchForecast(lat, lon);
     cacheWeatherData({ weather: data, city: data.name, hourly: state.lastHourlyData, daily: state.lastDailyData });
 
@@ -142,7 +139,9 @@ export async function fetchForecast(lat, lon) {
   try {
     let response;
     try {
-      response = await fetchWithTimeout(`${BASE_URL}/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`);
+      response = await fetchWithTimeout(
+        `${BASE_URL}?type=forecast&query=${encodeURIComponent(`lat=${lat}&lon=${lon}`)}`
+      );
     } catch (e) {
       if (e.name === 'AbortError') { showForecastError(); return; }
       throw e;
@@ -222,7 +221,7 @@ function buildDailyForecast(dailyMap) {
 // ─── Session cache ────────────────────────────────────────────────────────────
 
 const CACHE_KEY    = 'atmos_cache';
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min — aligns with OWM station refresh rate
+const CACHE_TTL_MS = 10 * 60 * 1000;
 
 function cacheWeatherData(payload) {
   try {
@@ -244,13 +243,6 @@ export function loadCache() {
 
 /**
  * Restores the last session on page load.
- *
- * Covers all four things a live fetchWeather call would do:
- *   1. Render current weather + forecast from cached data (instant, no network).
- *   2. Re-add the city to search history so Recent still shows it after a refresh.
- *   3. Re-fetch live AQI + alerts (not cached — cheap parallel calls, always current).
- *
- * Returns true if the cache was valid and the UI was restored, false otherwise.
  */
 export function restoreFromCache() {
   const cached = loadCache();
@@ -264,10 +256,8 @@ export function restoreFromCache() {
     if (cached.hourly) { renderHourly(cached.hourly); state.lastHourlyData = cached.hourly; }
     if (cached.daily)  { renderDaily(cached.daily);   state.lastDailyData  = cached.daily;  }
 
-    // Re-populate search history so the city appears in Recent after a refresh.
     if (cached.city) addToHistory(cached.city);
 
-    // AQI and alerts are not cached — re-fetch them live so they're always current.
     const { lat, lon } = cached.weather.coord;
     fetchSideEffects(lat, lon);
 

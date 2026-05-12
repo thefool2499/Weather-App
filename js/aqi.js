@@ -1,7 +1,7 @@
 /* ══════════════════════════════
    16. AIR QUALITY INDEX (AQI)
 ══════════════════════════════ */
-import { API_KEY } from './config.js';
+import { BASE_URL } from './config.js'; // ← removed API_KEY, added BASE_URL
 
 const AQI_META = [
   { label: 'Good',      color: '#22c55e', bg: 'rgba(34,197,94,0.14)'   },
@@ -14,7 +14,8 @@ const AQI_META = [
 export async function fetchAQI(lat, lon) {
   try {
     const r = await fetch(
-      `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`
+      // ✅ routes through netlify function — no API key exposed
+      `${BASE_URL}?type=air_pollution&query=${encodeURIComponent(`lat=${lat}&lon=${lon}`)}`
     );
 
     if (!r.ok) {
@@ -43,7 +44,6 @@ function renderAQI(data) {
   try {
     const aqi  = data.main.aqi;
 
-    // Guard: aqi must be 1–5; anything outside that range crashes the lookup
     if (typeof aqi !== 'number' || aqi < 1 || aqi > 5) {
       console.warn('[Atmos] AQI value out of expected range:', aqi);
       showAQIUnavailable();
@@ -74,7 +74,6 @@ function renderAQI(data) {
   }
 }
 
-// Gracefully marks AQI as unavailable rather than leaving it stuck at "—"
 function showAQIUnavailable() {
   const statNum = document.getElementById('aqi-stat-num');
   const statLbl = document.getElementById('aqi-stat-label');
